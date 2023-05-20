@@ -2,7 +2,7 @@
 
 # 1주차 목표: 자바 코드는 어떻게 실행되는가? 
 
-[그림]
+![java-execution-flow](../../assets/java-execution-flow.jpeg)
 </br> 
 
 <i>
@@ -53,7 +53,7 @@ JVM(Java Virtual Machine)은 플랫폼, OS, 아키텍처에 독립적으로 Java
 이제 JVM의 구성 요소를 상세하게 살펴보자.
 JVM은 크게 Class Loader, Execution Engin, Runtime Data Area로 나누어져 있다.
 
-[그림]
+![JVM](../../assets/JVM.jpeg)
 
 ### Class Loader
 
