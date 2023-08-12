@@ -83,4 +83,27 @@
 도커 컨테이너는 Image Layer + Read/Write Layer로 이루어져있다. </br>
 또한 Image Layer 는 Dockerfile에 정의되어있는 명령어들을 통해서 여러 Only Read Layer로 이루어져있다. </br>
 (Workdir, Run, Add, Copy 명령어는 레이어로 생성된다) </br>
-여기서 Image Layer는 Dockerfile을 통해서만 변경할 수 있고 컨테이너가 실행되면서 기록되는 내용들은 Read/Write Layer에 저장된다. </br>
+여기서 Image Layer는 Dockerfile을 통해서만 변경할 수 있고 컨테이너가 실행되면서 기록되는 내용들은 Read/Write Layer에 저장된다. 
+
+## 도커 빌드 시간 줄이기
+
+### 1. 레이어 캐시(Layer Cache)란?
+
+레이어 캐시(Layer Cache)란 도커 이미지를 빌드할때 Layer를 캐시하고 있다가 다시 동일하게 이미지가 빌드될때는 Layer의 변경점이 없으면 Cache된 레이어를 사용하는것을 말한다. </br>
+만약 Product 배포때마다 Docker Layer를 다시 빌드하여 생성한다면 리소스, 시간, 경제적으로 모두 비효율적일것이다. </br>
+특히나 큰 서비스에서 도커 이미지도 크고 여러 도커 이미지를 사용한다면 배포때마다 매번 새로 빌드 한다면 비효율적일것이다. </br>
+Layer Cache는 로컬에서는 자동으로 Layer Cache해주기때문에 특별히 제약 조건을 고려할 필요는 없다. </br> 
+하지만 CI/CD환경이 Github Action, CircleCI같은 매번 다른 가상환경을 제공한다면 Layer Cache가 될 수 있도록 조치를 취해야한다. </br>
+이것은 각 CI/CD 툴에 따라서 도커 Layer Cache 방법이 다를수있다. </br>
+참고로 Github Action에서는 `GitHub Cache API` 을 통해서 도커 레이어를 캐시할수있다. </br>
+
+### 2. 도커 이미지 경량화
+
+아예 도커 이미지를 경량화하여 빌드시간을 줄 일 수 있다. </br>
+아래 방법을 참고해보자.
+1. baseImage를 경량화된 이미지를 사용하기
+2. production에 사용되는 Dependencies만 사용하기 이미지에 넣기
+3. 불필요한 파일 제거하기
+
+이 이외에도 다양한 방법들이 존재하고 product에 다양한 방법이 있을 수있다. </br>
+관련 내용은 인터넷에 좀더 찾아보자. </br>
