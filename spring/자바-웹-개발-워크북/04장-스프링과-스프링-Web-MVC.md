@@ -403,3 +403,193 @@ public class CommonExceptionAdvice {
 }
 ```
 
+## 4.4 스프링 Web MVC 구현하기
+
+이전 장에서 Servlet으로 개발했던 Todo예제를 스프링 MVC로 개발해보자 </br>
+
+### 프로젝트의 구현 목표와 준비
+
+@Configuration: 스프링의 설정 파일임을 명시한다. </br>
+@Bean: 메서드의 실행 결과를 객체를 스프링의 빈으로 등록한다. </br>
+
+### MyBatis와 스프링을 이용한 영속 처리
+
+MyBatis와 스프링을 이용해서 개발하면 기존 JDBC를 이용할떄보다 코드의 양이 줄어들어 편리하다. </br>
+
+MyBatis로 개발하면 아래의 단계로 개발하게 된다. </br>
+1. VO선언
+```java
+public class TodoVO {
+    private Long tno;
+    private String title; 
+    private LocalDate dueDate; 
+    private String writer; 
+    private boolean finished;
+}
+```
+2. Mapper 인터페이스의 개발
+```java
+public interface TodoMapper {
+    String getTime();
+}
+```
+3. XML의 개발
+```xml
+<?xml version="1.0" encoding="UTF-8" ?> 
+<!DOCTYPE mapper 
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd"> 
+<mapper namespace="org.zerock.springex.mapper.TodoMapper">
+<select id="getTime" resultType="string">
+    select now() 
+    </select>
+</mapper>
+```
+4. 테스트 코드의 개발
+```java
+@Log4j2
+@ExtendWith(SpringExtension.class) 
+@ContextConfiguration(locations="file:src/main/webapp/WEB-INF/root-context.xml") 
+public class TodoMapperTests {
+    @Autowired(required = false) 
+    private TodoMapper todoMapper;
+    
+    ©Test
+    public void testGetTime() {
+        log.info(todoMapper.getTime());  // note: 테스트 코드는 최대한 로그로 파악하기보다는 assert로 확인해야 사람이 직접 틀린곳을 일일히 파악하지 않는다.
+    }
+}
+```
+
+### TodoMapper 인터페이스와 XML
+
+SQL실핼 로그를 자세히 살펴 보고 싶다면 패키지 로그를 TRACE 레벨로 기록하도록 Log4j2.xml을 만들고 아래 코드를 추가해야한다. </br>
+
+```xml
+<loggers>
+    <logger name="org.springframework" level="INFO" additivity="false">
+        <appender-ref ref="console" /> 
+    </logger>
+  
+    <logger name="org.zerock" level="INFO" additivity="false"> 
+        <appender-pef ref="console" />
+    </logger>
+
+    <logger name="org.zerock.springex.mapper" level="TRACE" additivity="false">
+        <appender-ref ref="console" />
+    </logger>
+    
+    <root level="INFO" additivity="false"> 
+        <AppenderRef ref="console"/>
+    </root> 
+</loggers>
+```
+
+### Todo 기능 개발
+
+TodoMapper -> TodoService -> TodoController -> JSP 순서로 개발한다. (예전에 데이터 중심 개발을 할때의 개발 순서이다. 요즘에는 테이블 보다는 도메인 객체를 먼저 만든다.) </br>
+여기서 중요한 프로세스는 TodoMapper와 TodoService를 만들고 테스트를 돌려본다. </br>
+그리고 테스트가 성공하면 TodoController를 만들고 테스트를 돌려본다. </br>
+
+MyBatis에서는 SQL에 ? 대신해서 #{variable} 형태로 파라미터를 지정한다. </br>
+
+#### @Valid를 이용한 서버사이드 검증
+
+Client(Web, App, PC, KIOSK)등 Client가 다양해지면서 서버사이드 유효성 검증은 필수적이고 사용자의 편의성을 위해서 Client에서도 유효성 검증을 해야한다. </br>
+스프링 MVC에서는 @Valid과 BindingResult를 이용해서 서버사이드 유효성 검증을 처리할 수 있다. </br>
+
+hibernate-validator을 사용하는 대표적인 어노테이션은 다음과 같다.  </br>
+- @NotNull: null이 아닌 값이어야 한다. </br>
+- @Null: null만 입력 가능하다. </br>
+- @NotEmpty: null이 아니고 값이 비어있지("") 않아야 한다. </br>
+- @NotBlank: null이 아니고 값이 비어있지("") 않고 공백이(" ") 아니어야 한다. </br>
+- @Size(min=, max=): 문자열, 배열의 길이가 min과 max사이여야 한다. </br>
+- @Pattern(regex=): 정규식을 만족해야 한다. </br>
+- @Max(num): num보다 작거나 같아야 한다. </br>
+- @Min(num): num보다 크거나 같아야 한다. </br>
+- @Future: 현재보다 미래여야 한다. </br>
+- @Past: 현재보다 과거여야 한다. </br>
+- @Positive: 양수여야 한다. </br>
+- @PositiveOrZero: 양수이거나 0이어야 한다. </br>
+- @Negative: 음수여야 한다. </br>
+- @NegativeOrZero: 음수이거나 0이어야 한다. </br>
+
+아래와 같이 어노테이션을 붙여 간단히 유효성 검증을 할 수 있다. </br>
+
+```java
+@...
+public class TodoDTO {
+  private Long tno;
+  @NotEmpty
+  private String title;
+  @Future
+  private LocalDate dueDate;
+  private boolean finished;
+  ©NotEmpty
+  private String writer;
+}
+
+@Controller
+public class TodoController {
+      @PostMapping("register")
+      public String registerPost(@Valid TodoDTO todoDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes){
+          // note: @Valid를 이용해서 유효성 검증을 하고 BindingResult 파라미터를 추가해서 에러를 확인할 수 있다.
+          if(bindingResult.hasErrors()) { 
+            log.info("has errors......"); 
+            return "/todo/register";
+          }
+          ...
+      }
+}
+```
+
+### 페이징 처리를 위한 TodoMapper
+
+사용자가 다 사용하지 않을지도 모르는 데이터를 DB에서 한번에 조회해서 넘겨주는것은 비효율적이다. </br>
+그래서 페이징 처리를 해서 사용자가 필요한 만큼만 데이터를 가져오는것이 효율적이다. </br>
+
+#### 페이징을 위한 SQL 연습
+
+limit
+```sql
+select * from tbl_todo order by tno desc limit 10; -- 10개씩 가져온다.
+select * from tbl_todo order by tno desc limit 20, 10; -- 20개씩 건너뛰고 10개씩 가져온다.
+select * from tbl_todo order by tno desc limit 20 offset 10; -- 20개씩 건너뛰고 10개씩 가져온다.
+```
+
+limit의 단점은 식 사용이 불가능하고 오직 숫자만 입력이 가능하다.
+
+### 검색/필터링 조건의 정의
+
+#### types에 따른 동적 쿼리
+
+검색 필터링을 하기위해서는 조건에 따라 변화되는 SQL인 동적쿼리를 작성해야한다. </br>
+MyBatis에서는 동적 쿼리를 지원하기 위해서 아래의 문법을 지원한다.  </br>
+- if: 조건에 따라서 SQL을 추가하거나 무시하기 위해서 사용한다. </br>
+- trim: 조건에 따라서 불필요하게 생성 될 수 있는 SQL을 제거하는데 사용한다. </br>
+- choose: switch문과 비슷하다. </br>
+- forEach: 반족적으로 처리할떄 사용한다. </br>
+
+#### types에 따른 동적 쿼리
+
+`<forEach>`태그의 대상은 List, Map, Set과 같은 컬렉션 계열이랑 같이 사용한다.
+`<where>`태그는 `<where>` 태그 안쪽 문자가 생성되어야만 where절이 생성된다.
+
+```xml
+<select id="selectList" resultType="org.zerock.springex.domain.TodoVO">
+  select * from tbl_todo
+  <where>
+  <forEach collection="types" item="type" open="(" close=")" separatop=" OR ">
+    <if test="type == 't'.toString()">
+      title like concat('%', #{keyword}, '%')
+    </if>
+    <if test="type == 'w'.toString()">
+      writer like concat('%', #{keyword}, '%') 
+    </if>
+  </foreach>
+  order by tno desc limit #{skip}, #{size}
+  </where>
+</select>
+```
+
+`<sql>`과 `<include>`: `<sql>`은 SQL문을 정의하고 `<include>`는 정의된 SQL문을 가져와서 사용한다. </br>
