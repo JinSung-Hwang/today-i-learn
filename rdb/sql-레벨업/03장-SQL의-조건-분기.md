@@ -69,6 +69,7 @@ Seq Scan on item  (cost=0.00..1.12 rows=200 width=50)
 
 ## 9강 집계와 조건 분기
 ### 1. 집계와 조건 분기
+PopultationTable
 
 | prefecture(지역이름) | sex(성별) | pop(인구) | 
 |:-----------------|---------|---------|
@@ -97,15 +98,17 @@ Sort  (cost=100.00..100.02 rows=6 width=40)
             Filter: sex = 1
         ->  Seq Scan on population  (cost=0.00..49.92 rows=3 width=40)
             Filter: sex = 2
------------------------------------------------------------
-prefecture	pop_men	pop_wom
-성남	60	NULL
-성남	NULL	40
-수원	90	NULL
-수원	NULL	100
-용인	70	NULL
-용인	NULL	60
 ```
+위 쿼리 결과
+
+| prefecture | pop_men | pop_wom |
+|------|---------|---------|
+| 성남 | 60      | NULL    |
+| 성남 | NULL    | 40      |
+| 수원 | 90      | NULL    |
+| 수원 | NULL    | 100     |
+| 용인 | 70      | NULL    |
+| 용인 | NULL    | 60      |
 이렇게 실행계획을 살펴보면 2번의 테이블 풀스캔이 일어나는 것을 확인할 수 있다.
 
 이 코드를 CASE식의 응용 방법인 `표측/표두 레이아웃 이동 문제형식`으로 리펙토링하면 아래와 같이 바꿀 수 있다.
@@ -119,6 +122,7 @@ GROUP BY prefecture;
 ```
 
 ### 2. 집약 결과로 조건 분기
+employeesTable
 
 | emp_id(직원ID) | team_id(팀 ID) | emp_name(직원 이름) | team(팀) |
 |-------------:|--------------:|----------------:|--------:|
